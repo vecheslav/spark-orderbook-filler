@@ -17,9 +17,9 @@ impl From<spark_market_sdk::OrderType> for OrderType {
     }
 }
 
-impl Into<spark_market_sdk::OrderType> for OrderType {
-    fn into(self) -> spark_market_sdk::OrderType {
-        match self {
+impl From<OrderType> for spark_market_sdk::OrderType {
+    fn from(val: OrderType) -> Self {
+        match val {
             OrderType::Buy => spark_market_sdk::OrderType::Buy,
             OrderType::Sell => spark_market_sdk::OrderType::Sell,
         }

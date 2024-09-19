@@ -53,12 +53,14 @@ impl Strategy {
                 // Random strategy for now
                 let (order_type, price) = if rng.gen_bool(0.5) {
                     let price = orderbook.best_ask().unwrap().price as u64;
+                    log::info!("Best ask {}", price);
                     (
                         OrderType::Buy,
                         cmp::min(price, last_external_price.unwrap()),
                     )
                 } else {
                     let price = orderbook.best_bid().unwrap().price as u64;
+                    log::info!("Best bid {}", price);
                     (
                         OrderType::Sell,
                         cmp::max(price, last_external_price.unwrap()),

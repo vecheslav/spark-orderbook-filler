@@ -18,6 +18,7 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Command::Core(args) => match args.commands {
             CoreCommands::Topup(args) => args.run().await,
+            CoreCommands::Mint(args) => args.run().await,
         },
         Command::Info(args) => match args.commands {
             InfoCommands::Balances(args) => args.run().await,

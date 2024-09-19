@@ -90,11 +90,27 @@ impl CallExecuter {
             .submit()
             .await
         {
-            Err(e) => log::error!("{} / {:?}", index, e),
             Ok(res) => {
                 calls.clear();
                 log::info!("{} / SUBMIT OK: {:?}", index, res.tx_id());
             }
+            Err(e) => log::error!("{} / {:?}", index, e),
         }
+        // match multi_call
+        //     .with_tx_policies(
+        //         TxPolicies::default()
+        //             .with_tip(1)
+        //             // Aprox gas for 30 calls
+        //             .with_script_gas_limit(20_000_000),
+        //     )
+        //     .call::<()>()
+        //     .await
+        // {
+        //     Ok(CallResponse { tx_id, .. }) => {
+        //         calls.clear();
+        //         log::info!("{} / SUBMIT OK: {:?}", index, tx_id);
+        //     }
+        //     Err(e) => log::error!("{} / {:?}", index, e),
+        // }
     }
 }

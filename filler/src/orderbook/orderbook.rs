@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
-use super::{Order, OrderId, OrderType};
+use super::{Order, OrderType};
 
 #[derive(Debug, Clone)]
 pub struct Orderbook {
-    pub buy: BTreeMap<OrderId, Order>,
-    pub sell: BTreeMap<OrderId, Order>,
+    pub buy: BTreeMap<u128, Order>,
+    pub sell: BTreeMap<u128, Order>,
 }
 
 impl Orderbook {
@@ -17,14 +17,14 @@ impl Orderbook {
     }
 
     pub fn insert(&mut self, order: Order) {
-        log::info!("INSERT ORDER: {:?}, {}", order.order_type, order.id);
+        log::info!("INSERT ORDER: {:?}, {}", order.order_type, order.price);
 
         match order.order_type {
             OrderType::Buy => {
-                self.buy.insert(order.id.clone(), order);
+                self.buy.insert(order.price, order);
             }
             OrderType::Sell => {
-                self.sell.insert(order.id.clone(), order);
+                self.sell.insert(order.price, order);
             }
         }
     }
@@ -37,16 +37,11 @@ impl Orderbook {
     }
 
     pub fn best_bid(&self) -> Option<&Order> {
-        self.buy.values().next()
+        self.buy.values().next_back()
     }
 
     pub fn best_ask(&self) -> Option<&Order> {
-        self.sell.values().next_back()
-    }
-
-    pub fn remove(&mut self, order_id: &OrderId) {
-        self.buy.remove(order_id);
-        self.sell.remove(order_id);
+        self.sell.values().next()
     }
 
     pub fn clear(&mut self) {

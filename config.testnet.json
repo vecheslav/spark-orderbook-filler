@@ -3,7 +3,7 @@
   "coingecko_host": "https://api.coingecko.com/api/v3",
   "interval": 500,
   "markets": [
-    "0x30bd67d27a021ae7acc982fdcbf905d3ea229f914e30b70860c0577457c87b19"
+    "0x416ccdaf69881ae345537b1844d1511b4103379fca43b8c2190aae8b42f08173"
   ],
   "assets": {
     "0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07": {
