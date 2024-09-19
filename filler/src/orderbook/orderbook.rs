@@ -17,8 +17,6 @@ impl Orderbook {
     }
 
     pub fn insert(&mut self, order: Order) {
-        log::info!("INSERT ORDER: {:?}, {}", order.order_type, order.price);
-
         match order.order_type {
             OrderType::Buy => {
                 self.buy.insert(order.price, order);

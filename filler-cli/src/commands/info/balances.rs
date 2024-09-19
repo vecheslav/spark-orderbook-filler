@@ -20,23 +20,31 @@ impl BalancesCommand {
     pub(crate) async fn run(&self) -> anyhow::Result<()> {
         let (wallet, traders) = setup(&self.rpc).await?;
         let contract_id = validate_contract_id(&self.contract_id)?;
-        let identity = wallet.address().into();
 
         let market_contract = SparkMarketContract::new(contract_id, wallet.clone()).await;
-
-        let account = market_contract.account(identity).await.unwrap().value;
-
         let (base, _base_decimals, quote, _quote_balance, ..) =
             market_contract.config().await.unwrap().value;
 
+        let account = market_contract
+            .account(wallet.address().into())
+            .await
+            .unwrap()
+            .value;
         let base_balance = wallet.get_asset_balance(&base).await?;
         let quote_balance = wallet.get_asset_balance(&quote).await?;
         println!("BALANCES: {:?}", (base_balance, quote_balance));
         println!("ACCOUNT: {:?}", account);
 
         for (i, trader) in traders.iter().enumerate() {
-            let market_contract = SparkMarketContract::new(contract_id, trader.clone()).await;
-            let account = market_contract.account(identity).await.unwrap().value;
+            let account = market_contract
+                .account(trader.address().into())
+                .await
+                .unwrap()
+                .value;
+
+            let base_balance = trader.get_asset_balance(&base).await?;
+            let quote_balance = trader.get_asset_balance(&quote).await?;
+            println!("BALANCES: {:?}", (base_balance, quote_balance));
             println!("{} / ACCOUNT: {:?}", i, account);
         }
 

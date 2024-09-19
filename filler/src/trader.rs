@@ -58,16 +58,8 @@ impl Trader {
         // Start handle signals
         tokio::spawn(async move {
             while let Some(signal) = signal_rx.lock().await.recv().await {
-                log::info!(
-                    "{} / SIGNAL: {:?}, {}, {}",
-                    index,
-                    signal.order_type,
-                    signal.price,
-                    *signal.amount
-                );
-
                 executer
-                    .handle_signal(signal, market_contract.clone())
+                    .handle_signal(index, signal, market_contract.clone())
                     .await;
             }
         });
@@ -81,10 +73,8 @@ impl Trader {
 
         tokio::spawn(async move {
             loop {
-                // TODO: depends on amount of calls
-                time::sleep(Duration::from_secs(5)).await;
+                time::sleep(Duration::from_millis(500)).await;
 
-                log::info!("{} / SUBMIT", index);
                 executer.submit(index, wallet.clone()).await;
             }
         });

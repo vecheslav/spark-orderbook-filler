@@ -4,7 +4,7 @@ use fuels::{
     types::{transaction::TxPolicies, Bits256},
 };
 use spark_market_sdk::SparkMarketContract;
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
 use crate::{
@@ -22,9 +22,11 @@ pub struct SignalMessage {
     pub price: u64,
 }
 
+pub type Call = CallHandler<WalletUnlocked, ContractCall, Bits256>;
+
 #[derive(Default)]
 pub struct CallExecuter {
-    pub calls: Arc<Mutex<Vec<CallHandler<WalletUnlocked, ContractCall, Bits256>>>>,
+    pub calls: Arc<Mutex<Vec<Call>>>,
 }
 
 impl CallExecuter {
@@ -39,6 +41,7 @@ impl CallExecuter {
     /// in the market contract.
     pub async fn handle_signal(
         &self,
+        index: usize,
         message: SignalMessage,
         market_contract: Arc<RwLock<SparkMarketContract>>,
     ) {
@@ -50,14 +53,20 @@ impl CallExecuter {
             price,
         } = message;
 
+        log::debug!(
+            "{} / SIGNAL: {:?}, {}, {}",
+            index,
+            order_type,
+            price,
+            *amount
+        );
+
         let market_contract = market_contract.read().await;
-        let call_params = CallParameters::default();
-        let call = market_contract
-            .get_instance()
-            .methods()
-            .open_order(*amount, order_type.into(), price)
-            .call_params(call_params.clone())
-            .unwrap();
+        let call =
+            market_contract
+                .get_instance()
+                .methods()
+                .open_order(*amount, order_type.into(), price);
 
         let mut calls = self.calls.lock().await;
         calls.push(call);
@@ -68,33 +77,52 @@ impl CallExecuter {
     /// This function reads the `multi_call`, and attempts to submit
     /// the accumulated calls. It logs the result of the submission.
     pub async fn submit(&self, index: usize, wallet: WalletUnlocked) {
-        let mut multi_call = CallHandler::new_multi_call(wallet.clone());
         let mut calls = self.calls.lock().await;
+        let total_calls = calls.len();
+        let bundle_size = 15;
 
-        if calls.is_empty() {
+        if total_calls < bundle_size {
             return;
         }
 
-        for call in calls.iter() {
+        let bundle = calls
+            .drain(..cmp::min(total_calls, bundle_size))
+            .collect::<Vec<_>>();
+
+        log::info!(
+            "{} / BUNDLE: {:?}, QUEUE: {:?}",
+            index,
+            bundle.len(),
+            calls.len()
+        );
+
+        // Drop calls to avoid locking before submit
+        drop(calls);
+
+        let mut multi_call = CallHandler::new_multi_call(wallet.clone());
+        for call in bundle.iter() {
             multi_call = multi_call.add_call(call.clone());
         }
 
-        log::info!("{} / CALLS: {:?}", index, calls.len());
+        // Send transactions without waiting for commit
         match multi_call
             .with_tx_policies(
                 TxPolicies::default()
                     .with_tip(1)
-                    // Aprox gas for 30 calls
-                    .with_script_gas_limit(20_000_000),
+                    .with_script_gas_limit(800_000 * bundle_size as u64),
             )
             .submit()
             .await
         {
             Ok(res) => {
-                calls.clear();
                 log::info!("{} / SUBMIT OK: {:?}", index, res.tx_id());
             }
-            Err(e) => log::error!("{} / {:?}", index, e),
+            Err(e) => {
+                log::error!("{} / {:?}", index, e);
+                // Revert bundle back to all calls
+                let mut calls = self.calls.lock().await;
+                calls.extend(bundle);
+            }
         }
         // match multi_call
         //     .with_tx_policies(

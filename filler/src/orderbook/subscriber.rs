@@ -45,7 +45,7 @@ impl OrderbookSubscriber {
                         if let Ok(res) = serde_json::from_str::<OrderResponseEnvio>(&text) {
                             match res.r#type.as_str() {
                                 "ka" => {
-                                    log::info!("KA");
+                                    log::debug!("KA");
                                     continue;
                                 }
                                 "connection_ack" => {
@@ -58,6 +58,7 @@ impl OrderbookSubscriber {
                                 "data" => {
                                     if let Some(payload) = res.payload {
                                         let mut orderbook = orderbook.write().await;
+                                        log::info!("NEW ORDERS");
 
                                         if let Some(orders) = payload.data.buy {
                                             orderbook.buy.clear();
