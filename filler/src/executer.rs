@@ -79,20 +79,20 @@ impl CallExecuter {
     pub async fn submit(&self, index: usize, wallet: WalletUnlocked) {
         let mut calls = self.calls.lock().await;
         let total_calls = calls.len();
-        let bundle_size = 15;
+        let bunch_size = 15;
 
-        if total_calls < bundle_size {
+        if total_calls < bunch_size {
             return;
         }
 
-        let bundle = calls
-            .drain(..cmp::min(total_calls, bundle_size))
+        let bunch = calls
+            .drain(..cmp::min(total_calls, bunch_size))
             .collect::<Vec<_>>();
 
         log::info!(
-            "{} / BUNDLE: {:?}, QUEUE: {:?}",
+            "{} / BUNCH: {:?}, QUEUE: {:?}",
             index,
-            bundle.len(),
+            bunch.len(),
             calls.len()
         );
 
@@ -100,7 +100,7 @@ impl CallExecuter {
         drop(calls);
 
         let mut multi_call = CallHandler::new_multi_call(wallet.clone());
-        for call in bundle.iter() {
+        for call in bunch.iter() {
             multi_call = multi_call.add_call(call.clone());
         }
 
@@ -109,19 +109,19 @@ impl CallExecuter {
             .with_tx_policies(
                 TxPolicies::default()
                     .with_tip(1)
-                    .with_script_gas_limit(800_000 * bundle_size as u64),
+                    .with_script_gas_limit(800_000 * bunch_size as u64),
             )
             .submit()
             .await
         {
             Ok(res) => {
-                log::info!("{} / SUBMIT OK: {:?}", index, res.tx_id());
+                log::info!("{} / OK: {:?}", index, res.tx_id());
             }
             Err(e) => {
                 log::error!("{} / {:?}", index, e);
-                // Revert bundle back to all calls
+                // Revert bunch back to all calls
                 let mut calls = self.calls.lock().await;
-                calls.extend(bundle);
+                calls.extend(bunch);
             }
         }
         // match multi_call

@@ -1,3 +1,3 @@
 pub(crate) mod cli;
-pub(crate) mod topup;
+pub(crate) mod prepare;
 pub(crate) mod mint;

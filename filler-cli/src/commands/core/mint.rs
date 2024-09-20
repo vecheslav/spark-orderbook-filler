@@ -33,7 +33,7 @@ pub(crate) struct MintCommand {
 
 impl MintCommand {
     pub(crate) async fn run(&self) -> anyhow::Result<()> {
-        let (wallet, traders) = setup(&self.rpc).await?;
+        let (wallet, traders) = setup(&self.rpc, 5).await?;
         let contract_id = validate_contract_id(&self.contract_id)?;
 
         let base = AssetId::from_str(&self.base).expect("Invalid asset");

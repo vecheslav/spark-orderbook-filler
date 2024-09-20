@@ -11,3 +11,4 @@ spark-market-sdk = { version = "0.3.1" }
 multiasset_sdk = { git = "https://github.com/compolabs/multiasset-contract.git" }
 anyhow = "1.0.88"
 dotenv = "0.15.0"
+tokio-retry = "0.3.0"

@@ -1,6 +1,6 @@
 use dotenv::dotenv;
 use price::PriceApi;
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, thread};
 use tokio::signal::unix::{signal, SignalKind};
 
 use crate::{bot::FillerBot, config::Config, price::CoingeckoApi};
@@ -27,20 +27,16 @@ async fn main() -> anyhow::Result<()> {
         env::var("COINGECKO_API_KEY").unwrap(),
     );
 
+    let count = thread::available_parallelism()?.get();
+    log::info!("THREADS: {}", count);
+
     let markets = config.markets.clone();
 
-    // ------------------- Start bots -------------------
+    // ------------------- Start bot -------------------
     let config = Arc::new(config);
     let price_api: Arc<dyn PriceApi> = Arc::new(price_api);
 
     // Create bots per each market
-    // let bots = join_all(
-    //     markets
-    //         .iter()
-    //         .map(|&id| FillerBot::new(id, config.clone(), price_api.clone()))
-    //         .collect::<Vec<_>>(),
-    // )
-    // .await;
     let bot = FillerBot::new(markets[0], config.clone(), price_api.clone()).await;
 
     // Run bot without strategy

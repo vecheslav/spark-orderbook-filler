@@ -73,7 +73,7 @@ impl Trader {
 
         tokio::spawn(async move {
             loop {
-                time::sleep(Duration::from_millis(500)).await;
+                time::sleep(Duration::from_millis(400)).await;
 
                 executer.submit(index, wallet.clone()).await;
             }

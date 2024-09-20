@@ -30,6 +30,9 @@ pub struct Config {
     /// Strategy interval in milliseconds
     pub interval: u64,
 
+    /// Number of traders to run
+    pub traders_num: usize,
+
     /// Spark Market contract IDs
     pub markets: Vec<ContractId>,
 
