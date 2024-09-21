@@ -3,19 +3,21 @@ use fuels::{
     crypto::SecretKey,
     types::ContractId,
 };
-use futures::future::join_all;
 use spark_market_sdk::SparkMarketContract;
 use std::{env, sync::Arc, time::Duration};
-use tokio::{sync::RwLock, time};
+use tokio::{
+    sync::{mpsc::unbounded_channel, Mutex, RwLock},
+    time,
+};
 
 use crate::{
     config::Config,
     error::Error,
+    operation::{OperationManager, OperationMessage},
     orderbook::{Orderbook, OrderbookSubscriber},
     price::PriceApi,
     strategy::Strategy,
-    trader::Trader,
-    types::{Amount, Asset},
+    types::{Amount, Asset, Receiver, Sender},
 };
 
 pub struct FillerBot {
@@ -35,7 +37,16 @@ pub struct FillerBot {
     pub quote: Asset,
 
     /// Traders
-    pub traders: Vec<Trader>,
+    pub traders: Vec<WalletUnlocked>,
+    pub next_trader: Arc<Mutex<usize>>,
+
+    pub market_contract: Arc<RwLock<SparkMarketContract>>,
+    pub operation_manager: Arc<OperationManager>,
+    pub operation_tx: Sender<OperationMessage>,
+    pub operation_rx: Receiver<OperationMessage>,
+
+    pub submit_tx: Sender<bool>,
+    pub submit_rx: Receiver<bool>,
 }
 
 impl FillerBot {
@@ -54,30 +65,16 @@ impl FillerBot {
         let wallet =
             WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider.clone())).unwrap();
 
-        // Secret keys for traders
-        let secret_keys = (traders_offset..traders_offset + config.traders_num)
+        let traders = (traders_offset..traders_offset + config.traders_num)
             .map(|i| {
-                SecretKey::new_from_mnemonic_phrase_with_path(
+                let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(
                     &mnemonic,
                     &format!("m/44'/60'/0'/{}", i),
                 )
-                .unwrap()
+                .unwrap();
+                WalletUnlocked::new_from_private_key(secret_key, Some(provider.clone()))
             })
             .collect::<Vec<_>>();
-
-        // Create traders
-        let traders = join_all(
-            secret_keys
-                .iter()
-                .enumerate()
-                .map(|(i, &secret_key)| {
-                    let wallet =
-                        WalletUnlocked::new_from_private_key(secret_key, Some(provider.clone()));
-                    Trader::new(i, market_id, wallet)
-                })
-                .collect::<Vec<_>>(),
-        )
-        .await;
 
         let market_contract = SparkMarketContract::new(market_id, wallet.clone()).await;
 
@@ -87,6 +84,11 @@ impl FillerBot {
 
         let orderbook = Orderbook::new();
 
+        // Initialize the operation channel & manager
+        let (operation_tx, operation_rx) = unbounded_channel::<OperationMessage>();
+        let (submit_tx, submit_rx) = unbounded_channel::<bool>();
+        let operation_manager = OperationManager::new(config.multicall_size);
+
         Self {
             config,
             base: Asset::new(base, base_decimals as u8),
@@ -95,6 +97,13 @@ impl FillerBot {
             last_external_price: Arc::new(RwLock::new(None)),
             price_api,
             traders,
+            next_trader: Arc::new(Mutex::new(0)),
+            market_contract: Arc::new(RwLock::new(market_contract)),
+            operation_manager: Arc::new(operation_manager),
+            operation_tx: Arc::new(operation_tx),
+            operation_rx: Arc::new(Mutex::new(operation_rx)),
+            submit_tx: Arc::new(submit_tx),
+            submit_rx: Arc::new(Mutex::new(submit_rx)),
         }
     }
 
@@ -122,12 +131,63 @@ impl FillerBot {
         self.start_sync_external_price(self.price_api.clone(), price_ids)
             .await;
 
-        // Run traders
-        for trader in &self.traders {
-            trader.run().await;
-        }
+        self.start_collect_operations().await;
+        self.start_process_operations().await;
 
         Ok(())
+    }
+
+    pub async fn start_collect_operations(&self) {
+        let operation_manager = self.operation_manager.clone();
+        let operation_rx = self.operation_rx.clone();
+        let submit_tx = self.submit_tx.clone();
+        let multicall_size = self.config.multicall_size;
+
+        // Start handle operations
+        tokio::spawn(async move {
+            while let Some(message) = operation_rx.lock().await.recv().await {
+                let total_operations = operation_manager.add(&message).await;
+
+                if total_operations >= multicall_size {
+                    log::debug!("TOTAL: {}", total_operations);
+
+                    if let Err(e) = submit_tx.send(true) {
+                        log::error!("{:?}", e);
+                    }
+                }
+            }
+        });
+    }
+
+    pub async fn start_process_operations(&self) {
+        let submit_rx = self.submit_rx.clone();
+
+        let operation_manager = self.operation_manager.clone();
+        let market_contract = self.market_contract.clone();
+        let traders = self.traders.clone();
+        let next_trader = self.next_trader.clone();
+
+        tokio::spawn(async move {
+            while submit_rx.lock().await.recv().await.is_some() {
+                let operation_manager = operation_manager.clone();
+                let market_contract = market_contract.clone();
+                let traders = traders.clone();
+                let next_trader = next_trader.clone();
+
+                let mut next_trader = next_trader.lock().await;
+
+                // Select trader
+                let trader = traders[*next_trader].clone();
+
+                // Move turn to the next trader
+                *next_trader = (*next_trader + 1) % traders.len();
+
+                // log::info!("TRADER: {}", *next_trader);
+                tokio::task::spawn(async move {
+                    operation_manager.process(&trader, &market_contract).await;
+                });
+            }
+        });
     }
 
     /// Start the strategy separately
@@ -136,16 +196,13 @@ impl FillerBot {
 
         let strategy = Strategy::new(self.base.clone(), self.quote.clone(), self.config.interval);
 
-        // Start strategy per each trader
-        for trader in &self.traders {
-            strategy
-                .start(
-                    self.orderbook.clone(),
-                    self.last_external_price.clone(),
-                    trader.signal_tx.clone(),
-                )
-                .await;
-        }
+        strategy
+            .start(
+                self.orderbook.clone(),
+                self.last_external_price.clone(),
+                self.operation_tx.clone(),
+            )
+            .await;
 
         Ok(())
     }
@@ -172,7 +229,7 @@ impl FillerBot {
                     let mut price = last_external_price.write().await;
                     // Calculate the price of the base asset in terms of the quote asset
                     *price = Some(*Amount::from_readable(prices[0] / prices[1], decimals));
-                    // log::info!("EXTERNAL PRICE: {:?}", price);
+                    log::debug!("EXTERNAL PRICE: {:?}", price);
                 }
 
                 // TODO: Sync price every 10 seconds (update when change to pro plan)

@@ -8,11 +8,10 @@ use crate::{bot::FillerBot, config::Config, price::CoingeckoApi};
 mod bot;
 mod config;
 mod error;
-mod executer;
+mod operation;
 mod orderbook;
 mod price;
 mod strategy;
-mod trader;
 mod types;
 
 #[tokio::main]

@@ -1,8 +1,9 @@
 {
   "indexer_ws_host": "ws://localhost:8080/v1/graphql",
   "coingecko_host": "https://api.coingecko.com/api/v3",
-  "interval": 400,
-  "traders_num": 8,
+  "interval": 50,
+  "traders_num": 12,
+  "multicall_size": 15,
   "markets": [
     "0x416ccdaf69881ae345537b1844d1511b4103379fca43b8c2190aae8b42f08173"
   ],

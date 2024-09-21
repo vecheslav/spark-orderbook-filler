@@ -3,7 +3,7 @@ use std::{cmp, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
 
 use crate::{
-    executer::SignalMessage,
+    operation::{OpenOrderOperation, Operation, OperationMessage},
     orderbook::{OrderType, Orderbook},
     types::{Amount, Asset, Sender},
 };
@@ -31,7 +31,7 @@ impl Strategy {
         &self,
         orderbook: Arc<RwLock<Orderbook>>,
         last_external_price: Arc<RwLock<Option<u64>>>,
-        signal_tx: Sender<SignalMessage>,
+        operation_tx: Sender<OperationMessage>,
     ) -> JoinHandle<()> {
         let interval = self.interval;
         let base = self.base.clone();
@@ -50,6 +50,7 @@ impl Strategy {
 
                 let orderbook = orderbook.read().await;
                 let mut rng = rand::thread_rng();
+
                 // Random strategy for now
                 let (order_type, price) = if rng.gen_bool(0.5) {
                     let price = orderbook.best_ask().unwrap().price as u64;
@@ -66,21 +67,23 @@ impl Strategy {
                 };
                 let amount = Amount::from_readable(rng.gen_range(0.00001..0.0001), base.decimals);
 
-                let signal = SignalMessage {
-                    order_type,
-                    base: base.clone(),
-                    quote: quote.clone(),
-                    amount,
-                    price,
+                let message = OperationMessage {
+                    operation: Operation::OpenOrder(OpenOrderOperation {
+                        order_type,
+                        base: base.clone(),
+                        quote: quote.clone(),
+                        amount,
+                        price,
+                    }),
                 };
 
-                if signal_tx.is_closed() {
-                    log::info!("Signal channel closed, stopping strategy...");
+                if operation_tx.is_closed() {
+                    log::info!("Operation channel closed, stopping strategy...");
                     break;
                 }
 
-                if let Err(e) = signal_tx.send(signal) {
-                    log::error!("Error sending signal: {:?}", e);
+                if let Err(e) = operation_tx.send(message) {
+                    log::error!("Error sending operation: {:?}", e);
                 }
             }
         })
