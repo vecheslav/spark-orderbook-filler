@@ -1,2 +1,2 @@
-pub(crate) mod cli;
 pub(crate) mod balances;
+pub(crate) mod cli;

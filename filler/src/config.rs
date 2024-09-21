@@ -33,6 +33,9 @@ pub struct Config {
     /// Number of traders to run
     pub traders_num: usize,
 
+    /// Maximum number of calls in multicall transaction
+    pub multicall_size: usize,
+
     /// Spark Market contract IDs
     pub markets: Vec<ContractId>,
 

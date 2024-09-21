@@ -111,14 +111,3 @@ impl PrepareCommand {
         Ok(())
     }
 }
-
-// pub async fn mint(
-//     contract: &MultiAssetContract,
-//     identity: Identity,
-//     asset: &AssetId,
-//     amount: u64,
-// ) -> anyhow::Result<()> {
-//     contract.mint(identity, &asset, amount).await?;
-//
-//     Ok(())
-// }

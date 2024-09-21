@@ -7,7 +7,10 @@ use std::str::FromStr;
 
 pub const ETH: &str = "0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07";
 
-pub(crate) async fn setup(rpc: &str, traders_num: usize) -> anyhow::Result<(WalletUnlocked, Vec<WalletUnlocked>)> {
+pub(crate) async fn setup(
+    rpc: &str,
+    traders_num: usize,
+) -> anyhow::Result<(WalletUnlocked, Vec<WalletUnlocked>)> {
     let provider = Provider::connect(rpc).await?;
     let mnemonic = std::env::var("WALLET_MNEMONIC")?;
     let wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider.clone()))?;
