@@ -32,6 +32,7 @@ impl Strategy {
         orderbook: Arc<RwLock<Orderbook>>,
         last_external_price: Arc<RwLock<Option<u64>>>,
         operation_tx: Sender<OperationMessage>,
+        max_amount: f64,
     ) -> JoinHandle<()> {
         let interval = self.interval;
         let base = self.base.clone();
@@ -49,23 +50,30 @@ impl Strategy {
                 }
 
                 let orderbook = orderbook.read().await;
+                // if orderbook.is
                 let mut rng = rand::thread_rng();
 
                 // Random strategy for now
+                let price = last_external_price.unwrap();
                 let (order_type, price) = if rng.gen_bool(0.5) {
-                    let price = orderbook.best_ask().unwrap().price as u64;
                     (
                         OrderType::Buy,
-                        cmp::min(price, last_external_price.unwrap()),
+                        match orderbook.best_ask() {
+                            Some(order) => cmp::min(order.price as u64, price),
+                            None => price,
+                        },
                     )
                 } else {
-                    let price = orderbook.best_bid().unwrap().price as u64;
                     (
                         OrderType::Sell,
-                        cmp::max(price, last_external_price.unwrap()),
+                        match orderbook.best_ask() {
+                            Some(order) => cmp::max(order.price as u64, price),
+                            None => price,
+                        },
                     )
                 };
-                let amount = Amount::from_readable(rng.gen_range(0.00001..0.0001), base.decimals);
+                let amount_range = (max_amount / 10.0)..max_amount;
+                let amount = Amount::from_readable(rng.gen_range(amount_range), base.decimals);
 
                 let message = OperationMessage {
                     operation: Operation::OpenOrder(OpenOrderOperation {

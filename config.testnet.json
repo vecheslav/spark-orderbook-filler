@@ -1,6 +1,7 @@
 {
   "indexer_ws_host": "ws://localhost:8080/v1/graphql",
   "coingecko_host": "https://api.coingecko.com/api/v3",
+  "max_amount": 0.001,
   "interval": 50,
   "traders_num": 12,
   "multicall_size": 15,

@@ -28,6 +28,10 @@ impl OrderbookSubscriber {
                 Ok(res) => res,
                 Err(e) => {
                     log::error!("Error while connecting to indexer: {}", e);
+
+                    // Reconnecting delay
+                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
                     continue;
                 }
             };

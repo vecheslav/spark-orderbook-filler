@@ -126,12 +126,11 @@ impl OperationManager {
                 operations.extend(bunch);
             }
         }
-        // match multi_call
+        // match multicall
         //     .with_tx_policies(
         //         TxPolicies::default()
         //             .with_tip(1)
-        //             // Aprox gas for 30 calls
-        //             .with_script_gas_limit(20_000_000),
+        //             .with_script_gas_limit(800_000 * self.multicall_size as u64),
         //     )
         //     .call::<()>()
         //     .await

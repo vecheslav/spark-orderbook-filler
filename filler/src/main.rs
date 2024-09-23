@@ -1,6 +1,6 @@
 use dotenv::dotenv;
 use price::PriceApi;
-use std::{env, sync::Arc, thread};
+use std::{env, sync::Arc};
 use tokio::signal::unix::{signal, SignalKind};
 
 use crate::{bot::FillerBot, config::Config, price::CoingeckoApi};
@@ -25,9 +25,6 @@ async fn main() -> anyhow::Result<()> {
         config.coingecko_host.clone(),
         env::var("COINGECKO_API_KEY").unwrap(),
     );
-
-    let count = thread::available_parallelism()?.get();
-    log::info!("THREADS: {}", count);
 
     let markets = config.markets.clone();
 

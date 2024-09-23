@@ -27,6 +27,9 @@ pub struct Config {
     /// Coingecko API host url
     pub coingecko_host: String,
 
+    /// Maximum amount to trade
+    pub max_amount: f64,
+
     /// Strategy interval in milliseconds
     pub interval: u64,
 

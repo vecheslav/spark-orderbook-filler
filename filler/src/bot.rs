@@ -1,7 +1,7 @@
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
     crypto::SecretKey,
-    types::ContractId,
+    types::{ContractId, DryRunner},
 };
 use spark_market_sdk::SparkMarketContract;
 use std::{env, sync::Arc, time::Duration};
@@ -62,9 +62,13 @@ impl FillerBot {
         let traders_offset: usize = env::var("TRADERS_OFFSET").unwrap().parse().unwrap();
 
         let provider = Provider::connect("testnet.fuel.network").await.unwrap();
+        let consensus_parameters = provider.consensus_parameters();
+        log::info!("Consensus parameters: {:?}", consensus_parameters);
+
         let wallet =
             WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider.clone())).unwrap();
 
+        // Generate trader wallets
         let traders = (traders_offset..traders_offset + config.traders_num)
             .map(|i| {
                 let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(
@@ -169,11 +173,6 @@ impl FillerBot {
 
         tokio::spawn(async move {
             while submit_rx.lock().await.recv().await.is_some() {
-                let operation_manager = operation_manager.clone();
-                let market_contract = market_contract.clone();
-                let traders = traders.clone();
-                let next_trader = next_trader.clone();
-
                 let mut next_trader = next_trader.lock().await;
 
                 // Select trader
@@ -182,8 +181,10 @@ impl FillerBot {
                 // Move turn to the next trader
                 *next_trader = (*next_trader + 1) % traders.len();
 
-                // log::info!("TRADER: {}", *next_trader);
-                tokio::task::spawn(async move {
+                let operation_manager = operation_manager.clone();
+                let market_contract = market_contract.clone();
+
+                tokio::spawn(async move {
                     operation_manager.process(&trader, &market_contract).await;
                 });
             }
@@ -201,6 +202,7 @@ impl FillerBot {
                 self.orderbook.clone(),
                 self.last_external_price.clone(),
                 self.operation_tx.clone(),
+                self.config.max_amount,
             )
             .await;
 
