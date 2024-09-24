@@ -231,11 +231,11 @@ impl FillerBot {
                     let mut price = last_external_price.write().await;
                     // Calculate the price of the base asset in terms of the quote asset
                     *price = Some(*Amount::from_readable(prices[0] / prices[1], decimals));
-                    log::debug!("EXTERNAL PRICE: {:?}", price);
+                    log::info!("EXTERNAL PRICE: {:?}", price);
                 }
 
-                // TODO: Sync price every 10 seconds (update when change to pro plan)
-                time::sleep(Duration::from_secs(10)).await;
+                // TODO: Sync price every 5 seconds (update when change to pro plan)
+                time::sleep(Duration::from_secs(5)).await;
             }
         });
     }

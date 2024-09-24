@@ -45,7 +45,7 @@ impl Strategy {
 
                 let last_external_price = last_external_price.read().await;
                 if last_external_price.is_none() {
-                    log::info!("No external price, skipping...");
+                    // log::info!("No external price, skipping...");
                     continue;
                 }
 
