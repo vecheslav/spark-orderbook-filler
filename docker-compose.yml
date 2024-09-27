@@ -5,8 +5,7 @@ services:
       WALLET_MNEMONIC: ${WALLET_MNEMONIC}
       COINGECKO_API_KEY: ${COINGECKO_API_KEY}
       TRADERS_OFFSET: ${TRADERS_OFFSET}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
     volumes:
       - ./config.testnet.json:/root/config.testnet.json
-    restart: unless-stopped

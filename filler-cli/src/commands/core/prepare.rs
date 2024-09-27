@@ -30,10 +30,14 @@ pub(crate) struct PrepareCommand {
     #[clap(long)]
     pub(crate) only_gas: bool,
 
+    /// Only deposit on market
+    #[clap(long)]
+    pub(crate) only_deposit: bool,
+
     /// The gas amount
     /// Ex. 10000000
     #[clap(long)]
-    pub(crate) gas_amount: u64,
+    pub(crate) gas_amount: Option<u64>,
 
     /// The URL to query
     /// Ex. testnet.fuel.network
@@ -71,14 +75,21 @@ impl PrepareCommand {
             let address = trader.address();
             let identity = Identity::from(address);
 
-            // Topup gas for trader
-            wallet
-                .transfer(address, self.gas_amount, eth, TxPolicies::default())
-                .await?;
-            println!("{} / Topped up gas for {:?}", i, identity);
+            if !self.only_deposit {
+                // Topup gas for trader
+                wallet
+                    .transfer(
+                        address,
+                        self.gas_amount.unwrap(),
+                        eth,
+                        TxPolicies::default(),
+                    )
+                    .await?;
+                println!("{} / Topped up gas for {:?}", i, identity);
 
-            if self.only_gas {
-                continue;
+                if self.only_gas {
+                    continue;
+                }
             }
 
             // Mint base and quote assets

@@ -62,8 +62,8 @@ impl FillerBot {
         let traders_offset: usize = env::var("TRADERS_OFFSET").unwrap().parse().unwrap();
 
         let provider = Provider::connect("testnet.fuel.network").await.unwrap();
-        let consensus_parameters = provider.consensus_parameters();
-        log::info!("Consensus parameters: {:?}", consensus_parameters);
+        // let consensus_parameters = provider.consensus_parameters();
+        // log::info!("Consensus parameters: {:?}", consensus_parameters);
 
         let wallet =
             WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider.clone())).unwrap();

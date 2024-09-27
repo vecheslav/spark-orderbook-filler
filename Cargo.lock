@@ -1690,7 +1690,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 1.6.1",
- "spark-market-sdk 0.4.0",
+ "spark-market-sdk",
  "thiserror",
  "tokio",
  "tokio-tungstenite",
@@ -1705,7 +1705,7 @@ dependencies = [
  "dotenv",
  "fuels",
  "multiasset_sdk",
- "spark-market-sdk 0.3.1",
+ "spark-market-sdk",
  "tokio",
  "tokio-retry",
 ]
@@ -5871,20 +5871,8 @@ dependencies = [
 
 [[package]]
 name = "spark-market-sdk"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d071017a1c44abdfbc6afe62179a7549b8c5ff96c9d1fca311bfbda31f33b28"
-dependencies = [
- "anyhow",
- "fuels",
- "rand",
- "tokio",
-]
-
-[[package]]
-name = "spark-market-sdk"
-version = "0.4.0"
-source = "git+https://github.com/vecheslav/orderbook-contract.git?branch=fix-with-account#d2d70032d8a99b123feb8ccd57fe72ef573186b5"
+version = "0.5.0"
+source = "git+https://github.com/compolabs/orderbook-contract.git?branch=release-0.5.0#6ea3db698e8f48343fa96ad11f9b53952b237754"
 dependencies = [
  "anyhow",
  "fuels",
