@@ -16,6 +16,6 @@ COPY ./config.testnet.json ./config.testnet.json
 ENV RUST_LOG="info" \
     WALLET_MNEMONIC="your mnemonic"  \
     COINGECKO_API_KEY="your api key" \
-    TRADERS_OFFSET=0
+    TRADER_SET=0
 
 CMD ["./filler"]

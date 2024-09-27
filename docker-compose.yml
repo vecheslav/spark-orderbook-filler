@@ -4,7 +4,7 @@ services:
     environment:
       WALLET_MNEMONIC: ${WALLET_MNEMONIC}
       COINGECKO_API_KEY: ${COINGECKO_API_KEY}
-      TRADERS_OFFSET: ${TRADERS_OFFSET}
+      TRADER_SET: ${TRADER_SET}
     # extra_hosts:
     #   - "host.docker.internal:host-gateway"
     volumes:

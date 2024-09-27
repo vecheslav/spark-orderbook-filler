@@ -59,7 +59,9 @@ impl FillerBot {
 
         // TODO: Remove this hardcoded mnemonic & add multiple wallet support
         let mnemonic = env::var("WALLET_MNEMONIC").unwrap();
-        let traders_offset: usize = env::var("TRADERS_OFFSET").unwrap().parse().unwrap();
+        // Trader set from 0
+        let trader_set = env::var("TRADER_SET").unwrap().parse::<usize>().unwrap() - 1;
+        log::info!("TRADER_SET: {}", trader_set);
 
         let provider = Provider::connect("testnet.fuel.network").await.unwrap();
         // let consensus_parameters = provider.consensus_parameters();
@@ -69,7 +71,8 @@ impl FillerBot {
             WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider.clone())).unwrap();
 
         // Generate trader wallets
-        let traders = (traders_offset..traders_offset + config.traders_num)
+        let trader_offset = trader_set * config.traders_num;
+        let traders = (trader_offset..trader_offset + config.traders_num)
             .map(|i| {
                 let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(
                     &mnemonic,
