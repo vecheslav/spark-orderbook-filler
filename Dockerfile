@@ -7,7 +7,7 @@ COPY . .
 RUN cargo build -p filler --release
 
 # 2. Run
-FROM gcr.io/distroless/cc-debian12 as runtime
+FROM gcr.io/distroless/cc-debian12 AS runtime
 WORKDIR /root
 
 COPY --from=builder /build/target/release/filler .
